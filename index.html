@@ -209,6 +209,7 @@ function drawBlock(x, y, color) {
     BLOCK_SIZE - 1,
     BLOCK_SIZE - 1
   );
+
   // 하이라이트 (윗면 밝게)
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
   ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, 4);
@@ -220,35 +221,40 @@ function drawBlock(x, y, color) {
 //  보드를 초기화합니다.
 //  board 변수를 ROWS × COLS 크기의 2D 배열로 만들고,
 //  모든 칸을 null 로 채워주세요.
-//
-//  힌트:
-//    board = [];
-//    for (ROWS 만큼 반복) {
-//      board에 null이 COLS개인 배열을 push
-//    }
 // ============================================================
 function initBoard() {
-  // TODO: 여기에 구현하세요
+  // 기존 보드를 비우고 새 2D 배열을 만듭니다.
+  board = [];
 
+  // ROWS만큼 행을 만들고, 각 행은 COLS개의 null로 채웁니다.
+  for (let r = 0; r < ROWS; r++) {
+    board.push(new Array(COLS).fill(null));
+  }
 }
 
 // ============================================================
 //  TODO 2: createPiece()
 //  ─────────────────────────────────────────────────────────
 //  새 블록을 생성해서 currentPiece에 할당합니다.
-//  PIECE_TYPES 중 랜덤으로 하나를 선택하고,
-//  x 는 보드 중앙, y 는 0 으로 설정하세요.
-//
-//  반환(또는 할당)할 객체 형태:
-//    { shape: SHAPES[type], color: COLORS[type], x: ..., y: 0 }
-//
-//  힌트:
-//    const type = PIECE_TYPES[ Math.floor(Math.random() * PIECE_TYPES.length) ];
-//    중앙 x = Math.floor((COLS - shape[0].length) / 2)
 // ============================================================
 function createPiece() {
-  // TODO: 여기에 구현하세요
+  // 7가지 블록 중 하나를 랜덤으로 선택합니다.
+  const type = PIECE_TYPES[Math.floor(Math.random() * PIECE_TYPES.length)];
 
+  // 선택된 블록의 모양과 색상을 가져옵니다.
+  const shape = SHAPES[type];
+  const color = COLORS[type];
+
+  // 블록이 보드 중앙에서 시작하도록 x 좌표를 계산합니다.
+  const startX = Math.floor((COLS - shape[0].length) / 2);
+
+  // 현재 블록 객체를 생성합니다.
+  currentPiece = {
+    shape: shape,
+    color: color,
+    x: startX,
+    y: 0
+  };
 }
 
 // ============================================================
@@ -256,53 +262,94 @@ function createPiece() {
 //  ─────────────────────────────────────────────────────────
 //  piece 를 (dx, dy) 만큼 이동했을 때 충돌이 발생하면 true,
 //  아니면 false 를 반환합니다.
-//
-//  검사해야 할 충돌 3가지:
-//    ① 왼쪽·오른쪽 벽 (x < 0 또는 x >= COLS)
-//    ② 바닥         (y >= ROWS)
-//    ③ 다른 블록    (board[y][x] !== null)
-//
-//  힌트:
-//    piece.shape 을 이중 for 로 순회하면서
-//    값이 1인 칸의 실제 보드 좌표 = (piece.x + col + dx, piece.y + row + dy)
 // ============================================================
 function isCollision(piece, dx, dy) {
-  // TODO: 여기에 구현하세요
+  // 블록의 shape 배열을 행과 열 기준으로 순회합니다.
+  for (let row = 0; row < piece.shape.length; row++) {
+    for (let col = 0; col < piece.shape[row].length; col++) {
 
+      // shape 값이 0인 칸은 실제 블록이 없으므로 검사하지 않습니다.
+      if (piece.shape[row][col] === 0) {
+        continue;
+      }
+
+      // 이동 후 실제 보드 좌표를 계산합니다.
+      const newX = piece.x + col + dx;
+      const newY = piece.y + row + dy;
+
+      // 왼쪽 벽 또는 오른쪽 벽과 충돌하는 경우
+      if (newX < 0 || newX >= COLS) {
+        return true;
+      }
+
+      // 바닥과 충돌하는 경우
+      if (newY >= ROWS) {
+        return true;
+      }
+
+      // 보드 내부에서 기존에 고정된 블록과 충돌하는 경우
+      // newY >= 0 조건은 혹시 블록 일부가 보드 위쪽에 있을 때 오류를 막기 위한 안전장치입니다.
+      if (newY >= 0 && board[newY][newX] !== null) {
+        return true;
+      }
+    }
+  }
+
+  // 위의 어떤 조건에도 걸리지 않았다면 충돌이 없습니다.
+  return false;
 }
 
 // ============================================================
 //  TODO 4: rotate(shape)
 //  ─────────────────────────────────────────────────────────
 //  2D 배열 shape 을 90도 시계 방향으로 회전한 새 배열을 반환합니다.
-//
-//  원리:
-//    회전 후 [row][col] = 원래 [rows-1-col][row]
-//    또는 전치(transpose) 후 각 행을 뒤집기
-//
-//  예시 (T 블록):
-//    입력:  [[0,1,0],[1,1,1]]
-//    출력:  [[1,0],[1,1],[1,0]]
-//
-//  힌트:
-//    const rows = shape.length, cols = shape[0].length;
-//    결과 배열 크기는 cols × rows (가로·세로 뒤바뀜)
 // ============================================================
 function rotate(shape) {
-  // TODO: 여기에 구현하세요
+  const rows = shape.length;
+  const cols = shape[0].length;
+  const rotated = [];
 
+  // 회전 후 배열 크기는 기존 cols × rows 입니다.
+  for (let col = 0; col < cols; col++) {
+    const newRow = [];
+
+    for (let row = rows - 1; row >= 0; row--) {
+      newRow.push(shape[row][col]);
+    }
+
+    rotated.push(newRow);
+  }
+
+  return rotated;
 }
 
 // ============================================================
 //  TODO 5: placePiece()
 //  ─────────────────────────────────────────────────────────
 //  currentPiece 를 board 에 고정시킵니다.
-//  shape 배열을 순회하며 값이 1인 칸을
-//  board[y][x] = currentPiece.color 로 설정하세요.
 // ============================================================
 function placePiece() {
-  // TODO: 여기에 구현하세요
+  // 현재 블록이 없으면 아무 작업도 하지 않습니다.
+  if (!currentPiece) {
+    return;
+  }
 
+  // 현재 블록의 shape 배열을 순회합니다.
+  for (let row = 0; row < currentPiece.shape.length; row++) {
+    for (let col = 0; col < currentPiece.shape[row].length; col++) {
+
+      // 값이 1인 칸만 실제 블록입니다.
+      if (currentPiece.shape[row][col] === 1) {
+        const boardX = currentPiece.x + col;
+        const boardY = currentPiece.y + row;
+
+        // 보드 범위 안에 있는 칸만 고정합니다.
+        if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
+          board[boardY][boardX] = currentPiece.color;
+        }
+      }
+    }
+  }
 }
 
 // ============================================================
@@ -310,36 +357,56 @@ function placePiece() {
 //  ─────────────────────────────────────────────────────────
 //  board 에서 모든 칸이 채워진 행(row)을 제거하고
 //  위의 행들을 아래로 내려옵니다. 점수도 계산해주세요.
-//
-//  점수 계산 예시 (1줄=100, 2줄=300, 3줄=500, 4줄=800):
-//    const points = [0, 100, 300, 500, 800];
-//    score += points[제거된 줄 수] * level;
-//
-//  힌트:
-//    가득 찬 행 = 모든 칸이 null 이 아닌 행
-//    제거 후: board.unshift(new Array(COLS).fill(null))  ← 맨 위에 빈 행 추가
-//
-//  linesCleared 와 level 도 갱신하세요.
-//    linesCleared += 제거한 줄 수;
-//    level = Math.floor(linesCleared / 10) + 1;
-//    dropInterval = Math.max(100, 1000 - (level - 1) * 100);
 // ============================================================
 function clearLines() {
-  // TODO: 여기에 구현하세요
+  let cleared = 0;
 
+  // 아래 행부터 위로 검사합니다.
+  // 행을 제거하면 인덱스가 바뀌므로 r++로 같은 위치를 다시 검사합니다.
+  for (let r = ROWS - 1; r >= 0; r--) {
+    const isFull = board[r].every(cell => cell !== null);
+
+    if (isFull) {
+      // 가득 찬 행을 제거합니다.
+      board.splice(r, 1);
+
+      // 맨 위에 빈 행을 추가합니다.
+      board.unshift(new Array(COLS).fill(null));
+
+      // 제거한 줄 수를 증가시킵니다.
+      cleared++;
+
+      // 같은 r 위치에 위 행이 내려왔으므로 다시 검사하기 위해 r을 증가시킵니다.
+      r++;
+    }
+  }
+
+  // 제거된 줄이 있을 때만 점수, 라인 수, 레벨, 속도를 갱신합니다.
+  if (cleared > 0) {
+    const points = [0, 100, 300, 500, 800];
+
+    // 한 번에 제거한 줄 수에 따라 점수를 계산합니다.
+    score += points[cleared] * level;
+
+    // 누적 제거 라인 수를 갱신합니다.
+    linesCleared += cleared;
+
+    // 10줄 제거마다 레벨이 1 증가합니다.
+    level = Math.floor(linesCleared / 10) + 1;
+
+    // 레벨이 오를수록 자동 하강 간격을 줄입니다.
+    // 최소 간격은 100ms입니다.
+    dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+
+    // 화면의 점수, 레벨, 라인 수를 갱신합니다.
+    updateUI();
+  }
 }
 
 // ============================================================
 //  TODO 7: draw()
 //  ─────────────────────────────────────────────────────────
 //  매 프레임 화면을 다시 그립니다.
-//
-//  순서:
-//    ① 배경 지우기 (ctx.fillStyle = '#0f172a' 후 fillRect 전체)
-//    ② board 를 순회하며 null 이 아닌 칸을 drawBlock 으로 그리기
-//    ③ currentPiece 가 있으면 shape 을 순회하며 그리기
-//
-//  이미 배경 지우기(①)는 아래에 작성되어 있습니다.
 // ============================================================
 function draw() {
   // ① 배경 지우기 — 완성
@@ -362,16 +429,29 @@ function draw() {
     ctx.stroke();
   }
 
-  // TODO ②: board 고정 블록 그리기
-  //   for (let r = 0; r < ROWS; r++) {
-  //     for (let c = 0; c < COLS; c++) {
-  //       if (board[r][c]) drawBlock(c, r, board[r][c]);
-  //     }
-  //   }
+  // ② board에 고정된 블록 그리기
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (board[r][c] !== null) {
+        drawBlock(c, r, board[r][c]);
+      }
+    }
+  }
 
-  // TODO ③: currentPiece 그리기
-  //   currentPiece.shape 의 값이 1인 칸을
-  //   drawBlock(currentPiece.x + col, currentPiece.y + row, currentPiece.color) 로 그리기
+  // ③ 현재 떨어지는 블록 그리기
+  if (currentPiece) {
+    for (let row = 0; row < currentPiece.shape.length; row++) {
+      for (let col = 0; col < currentPiece.shape[row].length; col++) {
+        if (currentPiece.shape[row][col] === 1) {
+          drawBlock(
+            currentPiece.x + col,
+            currentPiece.y + row,
+            currentPiece.color
+          );
+        }
+      }
+    }
+  }
 }
 
 // ============================================================
@@ -384,7 +464,6 @@ function draw() {
 //                         → 새 블록도 충돌이면 gameOver = true
 //  ArrowUp    : rotate(currentPiece.shape) 후
 //               충돌 없으면 currentPiece.shape = 회전된 shape
-//               충돌이면 취소 (기존 shape 유지)
 // ============================================================
 document.addEventListener('keydown', (e) => {
   if (gameOver) return;
@@ -392,19 +471,55 @@ document.addEventListener('keydown', (e) => {
 
   switch (e.key) {
     case 'ArrowLeft':
-      // TODO: 왼쪽 이동
+      // 왼쪽으로 이동했을 때 충돌이 없다면 실제로 이동합니다.
+      if (!isCollision(currentPiece, -1, 0)) {
+        currentPiece.x -= 1;
+      }
       break;
 
     case 'ArrowRight':
-      // TODO: 오른쪽 이동
+      // 오른쪽으로 이동했을 때 충돌이 없다면 실제로 이동합니다.
+      if (!isCollision(currentPiece, 1, 0)) {
+        currentPiece.x += 1;
+      }
       break;
 
     case 'ArrowDown':
-      // TODO: 빠른 하강
+      // 아래로 이동할 수 있으면 한 칸 내립니다.
+      if (!isCollision(currentPiece, 0, 1)) {
+        currentPiece.y += 1;
+      } else {
+        // 아래로 이동할 수 없으면 현재 블록을 보드에 고정합니다.
+        placePiece();
+
+        // 가득 찬 줄을 제거하고 점수를 갱신합니다.
+        clearLines();
+
+        // 새 블록을 생성합니다.
+        createPiece();
+
+        // 새 블록이 생성되자마자 충돌하면 게임 오버입니다.
+        if (isCollision(currentPiece, 0, 0)) {
+          gameOver = true;
+          showGameOver();
+        }
+      }
       break;
 
     case 'ArrowUp':
-      // TODO: 블록 회전
+      // 현재 블록을 회전한 임시 블록을 만듭니다.
+      const rotatedShape = rotate(currentPiece.shape);
+      const rotatedPiece = {
+        shape: rotatedShape,
+        color: currentPiece.color,
+        x: currentPiece.x,
+        y: currentPiece.y
+      };
+
+      // 회전 후 충돌이 없다면 회전을 적용합니다.
+      if (!isCollision(rotatedPiece, 0, 0)) {
+        currentPiece.shape = rotatedShape;
+      }
       break;
   }
 
@@ -415,27 +530,43 @@ document.addEventListener('keydown', (e) => {
 //  TODO 9: gameLoop(timestamp)
 //  ─────────────────────────────────────────────────────────
 //  requestAnimationFrame 으로 반복 호출되는 게임 루프입니다.
-//
-//  동작:
-//    1. gameOver 이면 리턴
-//    2. deltaTime = timestamp - lastTime
-//    3. deltaTime > dropInterval 이면:
-//       a. 충돌 없으면 currentPiece.y += 1
-//       b. 충돌이면:
-//          - placePiece()
-//          - clearLines()
-//          - createPiece()
-//          - 새 블록도 충돌이면 gameOver = true, 오버레이 표시
-//       c. lastTime = timestamp
-//    4. draw()
-//    5. requestAnimationFrame(gameLoop)
 // ============================================================
 function gameLoop(timestamp) {
   if (gameOver) return;
 
-  // TODO: 여기에 구현하세요
+  // 마지막 프레임 이후 경과 시간을 계산합니다.
+  const deltaTime = timestamp - lastTime;
 
-  draw();  // 일단 매 프레임 draw 는 실행되도록 유지
+  // 경과 시간이 현재 레벨의 하강 간격보다 크면 블록을 한 칸 내립니다.
+  if (deltaTime > dropInterval) {
+
+    // 아래로 한 칸 이동해도 충돌이 없다면 y 좌표를 증가시킵니다.
+    if (!isCollision(currentPiece, 0, 1)) {
+      currentPiece.y += 1;
+    } else {
+      // 아래로 이동할 수 없다면 현재 블록을 보드에 고정합니다.
+      placePiece();
+
+      // 가득 찬 줄을 제거하고 점수/레벨을 갱신합니다.
+      clearLines();
+
+      // 다음 블록을 생성합니다.
+      createPiece();
+
+      // 새 블록이 생성되자마자 충돌하면 더 이상 놓을 공간이 없으므로 게임 오버입니다.
+      if (isCollision(currentPiece, 0, 0)) {
+        gameOver = true;
+        showGameOver();
+        draw();
+        return;
+      }
+    }
+
+    // 마지막 하강 시간을 현재 timestamp로 갱신합니다.
+    lastTime = timestamp;
+  }
+
+  draw();
   requestAnimationFrame(gameLoop);
 }
 
